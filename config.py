@@ -14,8 +14,9 @@ class config:
     sentence_max_size = 100
     drop_out = 0.2
     learning_rate = 2e-5
-	batch_size = 32
-	output_size = 2
-	hidden_size = 256
-	embedding_length = 300
-	VAL_RATIO = 0.2
+    batch_size = 32
+    output_size = 2
+    hidden_size = 256
+    embedding_length = 300
+    VAL_RATIO = 0.2
+    MAX_CHARS = 20000

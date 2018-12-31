@@ -10,14 +10,16 @@ import time
 import torch
 import torch.nn.functional as F
 from torch.autograd import Variable
-import torch.optim as optim
 import numpy as np
 from LSTM_classifier import LSTMClassifier
 from data import *
 from config import config as cfg
+from data import DataLoader
+from summary import summary
 
-train, val, test = get_dataset()
-TEXT, vocab_size, word_embeddings, train_iter, valid_iter, test_iter = load_dataset(train, val, test, 32)
+data1 = DataLoader(r"C:\Users\Shubham\Desktop\data\quora\")
+train, val, test = data1.get_dataset()
+TEXT, vocab_size, word_embeddings, train_iter, valid_iter, test_iter = data1.load_dataset(train, val, test, 32)
 
 def clip_gradient(model, clip_value):
     params = list(filter(lambda p: p.grad is not None, model.parameters()))
@@ -32,8 +34,8 @@ def train_model(model, train_iter, epochs):
     steps = 0
     model.train()
     for idx, batch in enumerate(train_iter):
-        text = batch.text[0]
-        target = batch.label
+        text = batch.question_text[0]
+        target = batch.target
         target = torch.autograd.Variable(target).long()
         if torch.cuda.is_available():
             text = text.cuda()
@@ -79,7 +81,8 @@ def eval_model(model, val_iter):
 
     return total_epoch_loss/len(val_iter), total_epoch_acc/len(val_iter)
 
-model = LSTMClassifier(cfg.batch_size, cfg.output_size, cfg.hidden_size, vocab_size, cfg.embedding_length, word_embeddings)
+model = LSTMClassifier(cfg.embedding_length, cfg.hidden_size, vocab_size, 
+                       cfg.batch_size, True)
 loss_fn = F.cross_entropy
 
 for epoch in range(10):

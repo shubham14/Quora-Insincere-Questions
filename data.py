@@ -17,6 +17,7 @@ import time
 from torchtext.vocab import GloVe, CharNGram 
 import pickle
 from config import config as cfg
+from os.path import join as pjoin
 
 NLP = en_core_web_sm.load()
 MAX_CHARS = 20000
@@ -24,6 +25,9 @@ LOGGER = logging.getLogger("quora dataet")
 
 
 class DataLoader:
+	def __init__(self, path):
+		self.path = path
+
 	def tokenizer(self, comment):
 	    comment = re.sub(
 	        r"[\*\"“”\n\\…\+\-\/\=\(\)‘•:\[\]\|’\!;]", " ", str(comment))
@@ -37,19 +41,19 @@ class DataLoader:
 
 
 	def prepare_csv(self, seed=999):
-	    df_train = pd.read_csv(r"C:\Users\Shubham\Desktop\data\quora\train.csv")
+	    df_train = pd.read_csv(pjoin(self.path, "train.csv"))
 	    df_train["question_text"] = df_train.question_text.str.replace("\n", " ")
 	    idx = np.arange(df_train.shape[0])
 	    np.random.seed(seed)
 	    np.random.shuffle(idx)
 	    val_size = int(len(idx) * cfg.VAL_RATIO)
 	    df_train.iloc[idx[val_size:], :].to_csv(
-	        r"C:\Users\Shubham\Desktop\data\quora\dataset_train.csv", index=False)
+	        pjoin(self.path, "dataset_train.csv"), index=False)
 	    df_train.iloc[idx[:val_size], :].to_csv(
-	        r"C:\Users\Shubham\Desktop\data\quora\dataset_val.csv", index=False)
-	    df_test = pd.read_csv(r"C:\Users\Shubham\Desktop\data\quora\test.csv")
+	        pjoin(self.path, "dataset_val.csv"), index=False)
+	    df_test = pd.read_csv(pjoin(self.path, "test.csv"))
 	    df_test["question_text"] = df_test.question_text.str.replace("\n", " ")
-	    df_test.to_csv(r"C:\Users\Shubham\Desktop\data\quora\dataset_test.csv", index=False)
+	    df_test.to_csv(pjoin(self.path, "dataset_test.csv"), index=False)
 
 
 	def get_dataset(self, fix_length=100, lower=False, vectors=None):
@@ -57,17 +61,17 @@ class DataLoader:
 	        # pretrain vectors only supports all lower cases
 	        lower = True
 	    LOGGER.debug("Preparing CSV files...")
-	    prepare_csv()
+	    self.prepare_csv()
 	    question = data.Field(
 	        sequential=True,
 	        fix_length=fix_length,
-	        tokenize=tokenizer,
+	        tokenize=self.tokenizer,
 	        pad_first=True,
 	        lower=lower
 	    )
 	    LOGGER.debug("Reading train csv file...")
 	    train, val = data.TabularDataset.splits(
-	        path=r"C:\Users\Shubham\Desktop\data\quora", 
+	        path=self.path, 
 	        format='csv', skip_header=True,
 	        train='dataset_train.csv', validation='dataset_val.csv',
 	        fields=[
@@ -78,7 +82,7 @@ class DataLoader:
 	        ])
 	    LOGGER.debug("Reading test csv file...")
 	    test = data.TabularDataset(
-	        path=r"C:\Users\Shubham\Desktop\data\quora\dataset_test.csv", 
+	        path=pjoin(self.path, 'test.csv'), 
 	        format='csv', skip_header=True,
 	        fields=[
 	            ('id', None),
@@ -117,30 +121,21 @@ class DataLoader:
 	    print ("Vector size of Text Vocabulary: ", TEXT.vocab.vectors.size())
 	    print ("Label Length: " + str(len(LABEL.vocab)))
 	    
-	    train_iter = get_iterator(train, batch_size)
-	    val_iter = get_iterator(val, batch_size)
-	    test_iter = get_iterator(test, batch_size, train=False)
+	    train_iter = self.get_iterator(train, batch_size)
+	    val_iter = self.get_iterator(val, batch_size)
+	    test_iter = self.get_iterator(test, batch_size, train=False)
 	    
 	    vocab_size = len(TEXT.vocab)
 
 	    return TEXT, vocab_size, word_embeddings, train_iter, val_iter, test_iter
 
 if __name__ == "__main__":
-	data = DataLoader()
+    data1 = DataLoader(r"C:\Users\Shubham\Desktop\data\quora\")
     st = time.time()
-    train, val, test = data.get_dataset()
+    train, val, test = data1.get_dataset()
     end = time.time()
     total_time = end - st
     print("%0.2f seconds" %total_time)
     
-    TEXT, vocab_size, word_embeddings, train_iter, val_iter, test_iter = data.load_dataset(train, val, test, 32)
+    TEXT, vocab_size, word_embeddings, train_iter, val_iter, test_iter = data1.load_dataset(train, val, test, 32)
     
-#    print ("Iterating over train set")
-#    for examples in get_iterator(train, 32, train=True,
-#            shuffle=True, repeat=False):
-#        x = examples.question_text # (fix_length, batch_size) Tensor
-#        y = torch.stack([
-#            examples.target
-#        ], dim=1)
-#    
-#    print("done")

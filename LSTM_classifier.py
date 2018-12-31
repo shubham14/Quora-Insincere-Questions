@@ -9,31 +9,35 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 from torch.nn import functional as F
+from config import config as cfg
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+
 
 class LSTMClassifier(nn.Module):
-    def __init__(self, batch_size, output_size, hidden_size, vocab_size,
-                 embedding_length, weights):
+
+    def __init__(self, embedding_dim, hidden_dim, vocab_size, label_size, batch_size, use_gpu):
         super(LSTMClassifier, self).__init__()
+        self.hidden_dim = hidden_dim
         self.batch_size = batch_size
-        self.output_size = output_size
-        self.hidden_size = hidden_size
-        self.vocab_size = vocab_size
-        self.embedding_length = embedding_length
-        
-        self.embeddings = nn.Embedding(vocab_size, embedding_length)
-        self.embeddings.weight = nn.Parameter(weights, requires_grad=False)
-        self.lstm = nn.LSTM(embedding_length, hidden_size)
-        self.label = nn.Linear(hidden_size, output_size)
-        
-    def forward(self, input_sent, batch_size=None):
-        inp = self.embedding(input_sent)
-        inp = inp.permute(1, 0, 2)
-        if batch_size is None:
-            h_0 = Variable(torch.zeros(1, self.batch_size, self.hidden_size).cuda()) # Initial hidden state of the LSTM
-            c_0 = Variable(torch.zeros(1, self.batch_size, self.hidden_size).cuda()) # Initial cell state of the LSTM
+        self.use_gpu = use_gpu
+
+        self.word_embeddings = nn.Embedding(vocab_size, embedding_dim)
+        self.lstm = nn.LSTM(embedding_dim, hidden_dim)
+        self.hidden2label = nn.Linear(hidden_dim, label_size)
+        self.hidden = self.init_hidden()
+
+    def init_hidden(self):
+        if self.use_gpu:
+            h0 = Variable(torch.zeros(1, self.batch_size, self.hidden_dim).cuda())
+            c0 = Variable(torch.zeros(1, self.batch_size, self.hidden_dim).cuda())
         else:
-            h_0 = Variable(torch.zeros(1, batch_size, self.hidden_size).cuda())
-            c_0 = Variable(torch.zeros(1, batch_size, self.hidden_size).cuda())
-        output, (final_hidden_state, final_cell_state) = self.lstm(inp, (h_0, c_0))
-        final_output = self.label(final_hidden_state[-1])
-        return final_output
+            h0 = Variable(torch.zeros(1, self.batch_size, self.hidden_dim))
+            c0 = Variable(torch.zeros(1, self.batch_size, self.hidden_dim))
+        return (h0, c0)
+
+    def forward(self, sentence):
+        embeds = self.word_embeddings(sentence)
+        x = embeds.view(len(sentence), self.batch_size, -1)
+        lstm_out, self.hidden = self.lstm(x, self.hidden)
+        y  = self.hidden2label(lstm_out[-1])
+        return y
