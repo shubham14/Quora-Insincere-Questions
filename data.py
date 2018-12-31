@@ -16,10 +16,10 @@ from torchtext import data
 import time
 from torchtext.vocab import GloVe, CharNGram 
 import pickle
+from config import config as cfg
 
 NLP = en_core_web_sm.load()
 MAX_CHARS = 20000
-VAL_RATIO = 0.2
 LOGGER = logging.getLogger("quora dataet")
 
 
@@ -42,7 +42,7 @@ class DataLoader:
 	    idx = np.arange(df_train.shape[0])
 	    np.random.seed(seed)
 	    np.random.shuffle(idx)
-	    val_size = int(len(idx) * VAL_RATIO)
+	    val_size = int(len(idx) * cfg.VAL_RATIO)
 	    df_train.iloc[idx[val_size:], :].to_csv(
 	        r"C:\Users\Shubham\Desktop\data\quora\dataset_train.csv", index=False)
 	    df_train.iloc[idx[:val_size], :].to_csv(

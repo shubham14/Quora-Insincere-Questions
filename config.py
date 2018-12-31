@@ -18,3 +18,4 @@ class config:
 	output_size = 2
 	hidden_size = 256
 	embedding_length = 300
+	VAL_RATIO = 0.2

@@ -34,6 +34,6 @@ class LSTMClassifier(nn.Module):
         else:
             h_0 = Variable(torch.zeros(1, batch_size, self.hidden_size).cuda())
             c_0 = Variable(torch.zeros(1, batch_size, self.hidden_size).cuda())
-        output, (final_hidden_state, final_cell_state) = self.lstm(input, (h_0, c_0))
+        output, (final_hidden_state, final_cell_state) = self.lstm(inp, (h_0, c_0))
         final_output = self.label(final_hidden_state[-1])
         return final_output
